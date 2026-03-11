@@ -5,6 +5,8 @@ const { generateDocxBuffer } = require('./docxGenerator');
 const app = express();
 app.use(cors());
 app.use(express.json({ limit: '2mb' }));
+// Mermaid rendering via Puppeteer can take 15-30s
+app.use((req, res, next) => { req.setTimeout(120000); res.setTimeout(120000); next(); });
 
 // Health check
 app.get('/', (req, res) => res.json({ status: 'ok', service: 'hiumanlab-docx-backend' }));

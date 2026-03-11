@@ -1,8 +1,9 @@
 const {
   Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell,
   AlignmentType, BorderStyle, WidthType, ShadingType,
-  VerticalAlign, PageBreak, LevelFormat
+  VerticalAlign, PageBreak, LevelFormat, ImageRun
 } = require('docx');
+const { mermaidToPng } = require('./mermaidRenderer');
 
 const PURPLE = "8747ED";
 const ORANGE = "F5A623";
@@ -125,8 +126,42 @@ const getTerms = (clientName) => [
 
 // ─── Generador principal ─────────────────────────────────────────────────────
 
+// Helper: image paragraph from PNG buffer
+const imgParagraph = (pngBuffer, widthEmu = 5400000) => {
+  const aspect = 1; // will be overridden by actual image
+  return new Paragraph({
+    children: [new ImageRun({
+      data: pngBuffer,
+      transformation: { width: Math.round(widthEmu / 9144), height: Math.round(widthEmu / 9144 / 2) },
+      type: 'png'
+    })],
+    spacing: { before: 120, after: 120 }
+  });
+};
+
 async function generateDocxBuffer(p) {
   const terms = getTerms(p.tituloCliente);
+
+  // ── Render Mermaid diagrams to PNG ──────────────────────────────────────
+  console.log('Rendering Mermaid diagrams...');
+  let imgArquitectura = null;
+  let imgFlujo = null;
+  let imgRoles = null;
+
+  const renderDiagram = async (code) => {
+    try {
+      return await mermaidToPng(code, { width: 900 });
+    } catch (e) {
+      console.error('Mermaid render error:', e.message);
+      return null;
+    }
+  };
+
+  if (p.diagramas?.arquitectura) imgArquitectura = await renderDiagram(p.diagramas.arquitectura);
+  if (p.diagramas?.flujo)        imgFlujo        = await renderDiagram(p.diagramas.flujo);
+  if (p.diagramas?.roles)        imgRoles        = await renderDiagram(p.diagramas.roles);
+
+  console.log('Diagrams rendered. Building document...');
 
   const tiemposFases = [
     { name: "Levantamiento de Requerimientos", ...p.tiempos.levantamiento },
@@ -250,9 +285,18 @@ async function generateDocxBuffer(p) {
 
         // ── DIAGRAMAS ─────────────────────────────────────────────────────────
         h1("DIAGRAMAS"),
-        h3("- Arquitectura General:"), body(p.diagramas.arquitectura),
-        h3("- Diagrama de Flujo de Información:"), body(p.diagramas.flujo),
-        h3("- Diagrama de Roles:"), body(p.diagramas.roles),
+        h3("- Arquitectura General:"),
+        ...(imgArquitectura
+          ? [new Paragraph({ children: [new ImageRun({ data: imgArquitectura, transformation: { width: 590, height: 300 }, type: 'png' })], spacing: { before: 120, after: 240 } })]
+          : [body(p.diagramas.arquitectura)]),
+        h3("- Diagrama de Flujo de Información:"),
+        ...(imgFlujo
+          ? [new Paragraph({ children: [new ImageRun({ data: imgFlujo, transformation: { width: 590, height: 300 }, type: 'png' })], spacing: { before: 120, after: 240 } })]
+          : [body(p.diagramas.flujo)]),
+        h3("- Diagrama de Roles:"),
+        ...(imgRoles
+          ? [new Paragraph({ children: [new ImageRun({ data: imgRoles, transformation: { width: 590, height: 280 }, type: 'png' })], spacing: { before: 120, after: 240 } })]
+          : [body(p.diagramas.roles)]),
         pb(),
 
         // ── CRITERIOS ─────────────────────────────────────────────────────────
