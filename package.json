@@ -1,0 +1,15 @@
+{
+  "name": "hiumanlab-docx-backend",
+  "version": "1.0.0",
+  "type": "commonjs",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "node index.js"
+  },
+  "dependencies": {
+    "docx": "^9.5.3",
+    "express": "^4.18.2",
+    "cors": "^2.8.5"
+  }
+}
