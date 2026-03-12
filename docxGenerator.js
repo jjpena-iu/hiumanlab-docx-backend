@@ -111,32 +111,18 @@ const semCell = (active) => new TableCell({
  */
 const buildPageHeader = () => new Header({
   children: [
-    new Table({
-      width: { size: 9000, type: WidthType.DXA },
-      borders: {
-        top: { style: BorderStyle.NONE }, bottom: { style: BorderStyle.SINGLE, size: 4, color: "E5E7EB" },
-        left: { style: BorderStyle.NONE }, right: { style: BorderStyle.NONE },
-        insideH: { style: BorderStyle.NONE }, insideV: { style: BorderStyle.NONE },
+    new Paragraph({
+      children: [
+        new TextRun({ text: "/", bold: true, color: PURPLE, size: 28, font: "Arial Black" }),
+        new TextRun({ text: "hiuman", bold: true, color: DARK, size: 22, font: "Arial Black" }),
+        new TextRun({ text: "lab", bold: true, color: DARK, size: 22, font: "Arial Black" }),
+        new TextRun({ text: "®  ", color: DARK, size: 12 }),
+        new TextRun({ text: "Creating Technology Together", color: "888888", size: 14, italics: true }),
+      ],
+      border: {
+        bottom: { style: BorderStyle.SINGLE, size: 4, color: "E5E7EB", space: 4 }
       },
-      rows: [new TableRow({
-        children: [
-          // Logo texto: /hiumanlab®
-          new TableCell({
-            width: { size: 9000, type: WidthType.DXA },
-            margins: { bottom: 60 },
-            children: [new Paragraph({
-              children: [
-                run("/", { bold: true, color: PURPLE, size: 28, font: "Arial Black" }),
-                run("hiuman", { bold: true, color: DARK, size: 22, font: "Arial Black" }),
-                run("lab", { bold: true, color: DARK, size: 22, font: "Arial Black" }),
-                run("®", { color: DARK, size: 12 }),
-                run("   Creating Technology Together", { color: "888888", size: 14, italics: true }),
-              ],
-              spacing: { after: 0 }
-            })]
-          })
-        ]
-      })]
+      spacing: { after: 80 }
     })
   ]
 });
