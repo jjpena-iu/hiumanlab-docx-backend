@@ -6,66 +6,62 @@ const {
 } = require('docx');
 const { mermaidToPng } = require('./mermaidRenderer');
 
-// ─── Paleta de colores suavizada ─────────────────────────────────────────────
-const PURPLE      = "7B5EA7";   // antes: 8747ED → más suave/profesional
-const PURPLE_DARK = "4A3570";   // para títulos principales
-const ORANGE      = "E8980A";   // antes: F5A623 → más cálido/menos saturado
-const DARK        = "1A1A2E";
-const WHITE       = "FFFFFF";
-const LIGHT_PURPLE = "EEE8F8";  // antes: EDE8FB → ligeramente más suave
-const PURPLE_TABLE = "8B6BB5";  // cabeceras de tabla
-const GRAY_TEXT   = "666666";
+// ─── Paleta de colores ────────────────────────────────────────────────────────
+const PURPLE       = "7B5EA7";
+const PURPLE_DARK  = "4A3570";
+const ORANGE       = "E8980A";
+const DARK         = "1A1A2E";
+const WHITE        = "FFFFFF";
+const LIGHT_PURPLE = "EEE8F8";
+const PURPLE_TABLE = "8B6BB5";
+const GRAY_TEXT    = "666666";
 
 // ─── Helpers de texto ────────────────────────────────────────────────────────
-
 const run = (text, opts = {}) =>
   new TextRun({ text: String(text ?? ''), font: "Arial", color: DARK, size: 20, ...opts });
 
-const purpleRun  = (text, size = 24, bold = true) => run(text, { bold, color: PURPLE_DARK, size });
-const orangeRun  = (text, size = 20, bold = true) => run(text, { bold, color: ORANGE, size });
+const orangeRun = (text, size = 20, bold = true) => run(text, { bold, color: ORANGE, size });
 
 const h1 = (text) => new Paragraph({
   children: [run(text.toUpperCase(), { bold: true, color: PURPLE_DARK, size: 32 })],
-  spacing: { before: 240, after: 100 },   // reducido: antes 360/120
+  spacing: { before: 200, after: 100 },
   border: { bottom: { style: BorderStyle.SINGLE, size: 6, color: PURPLE, space: 3 } }
 });
 
 const h2 = (text) => new Paragraph({
   children: [run(text, { bold: true, color: PURPLE, size: 24 })],
-  spacing: { before: 160, after: 60 }     // reducido: antes 240/80
+  spacing: { before: 140, after: 40 }
 });
 
 const h3 = (text) => new Paragraph({
   children: [run(text, { bold: true, color: PURPLE, size: 21 })],
-  spacing: { before: 120, after: 40 }     // reducido: antes 160/60
+  spacing: { before: 100, after: 40 }
 });
 
 const body = (text) => new Paragraph({
   children: [run(text)],
-  spacing: { before: 40, after: 40 }      // reducido: antes 60/60
+  spacing: { before: 40, after: 40 }
 });
 
 const labelBody = (label, text) => new Paragraph({
   children: [orangeRun(label + ": "), run(text)],
-  spacing: { before: 60, after: 60 }
+  spacing: { before: 50, after: 50 }
 });
 
 const numbered = (num, label, text) => new Paragraph({
   children: [orangeRun(`${num}. `, 20, true), run(label, { bold: true }), run(": " + text)],
-  spacing: { before: 50, after: 50 }      // reducido: antes 60/60
+  spacing: { before: 40, after: 40 }
 });
 
 const bullet = (text) => new Paragraph({
   numbering: { reference: "bullets", level: 0 },
   children: [run(text)],
-  spacing: { before: 30, after: 30 }      // reducido: antes 40/40
+  spacing: { before: 30, after: 30 }
 });
 
 const pb = () => new Paragraph({ children: [new PageBreak()] });
-const spacer = (before = 80) => new Paragraph({ text: "", spacing: { before } }); // reducido default
 
 // ─── Helpers de tabla ────────────────────────────────────────────────────────
-
 const tableBorders = {
   top:     { style: BorderStyle.SINGLE, size: 4, color: PURPLE },
   bottom:  { style: BorderStyle.SINGLE, size: 4, color: PURPLE },
@@ -80,9 +76,7 @@ const headerCell = (text, width) => new TableCell({
   shading: { fill: PURPLE_TABLE, type: ShadingType.CLEAR },
   margins: { top: 70, bottom: 70, left: 120, right: 120 },
   verticalAlign: VerticalAlign.CENTER,
-  children: [new Paragraph({
-    children: [run(text, { bold: true, color: WHITE, size: 18 })]
-  })]
+  children: [new Paragraph({ children: [run(text, { bold: true, color: WHITE, size: 18 })] })]
 });
 
 const dataCell = (text, width, opts = {}) => new TableCell({
@@ -103,12 +97,7 @@ const semCell = (active) => new TableCell({
   })]
 });
 
-// ─── Header y Footer de página ───────────────────────────────────────────────
-
-/**
- * Header: Logo /hiumanlab® + tagline (SVG reconstruido como texto)
- * Se posiciona arriba a la izquierda con línea divisoria inferior
- */
+// ─── Header de página ─────────────────────────────────────────────────────────
 const buildPageHeader = () => new Header({
   children: [
     new Paragraph({
@@ -119,23 +108,18 @@ const buildPageHeader = () => new Header({
         new TextRun({ text: "®  ", color: DARK, size: 12 }),
         new TextRun({ text: "Creating Technology Together", color: "888888", size: 14, italics: true }),
       ],
-      border: {
-        bottom: { style: BorderStyle.SINGLE, size: 4, color: "E5E7EB", space: 4 }
-      },
-      spacing: { after: 80 }
+      border: { bottom: { style: BorderStyle.SINGLE, size: 4, color: "E5E7EB", space: 4 } },
+      spacing: { after: 60 }
     })
   ]
 });
 
-/**
- * Footer: 4 columnas — Logo iucorporation | ¡Contáctanos! | CDMX | MID | Redes
- */
+// ─── Footer de página ─────────────────────────────────────────────────────────
 const buildPageFooter = () => new Footer({
   children: [
-    // Línea superior del footer
     new Paragraph({
       border: { top: { style: BorderStyle.SINGLE, size: 4, color: "E5E7EB", space: 4 } },
-      spacing: { before: 0, after: 60 },
+      spacing: { before: 0, after: 40 },
       children: []
     }),
     new Table({
@@ -148,7 +132,6 @@ const buildPageFooter = () => new Footer({
       },
       rows: [new TableRow({
         children: [
-          // Col 1: Logo iucorporation + URL
           new TableCell({
             width: { size: 1400, type: WidthType.DXA },
             margins: { top: 0, bottom: 0, left: 0, right: 60 },
@@ -157,12 +140,11 @@ const buildPageFooter = () => new Footer({
                 run("/", { bold: true, color: PURPLE, size: 18, font: "Arial Black" }),
                 run("iu", { bold: true, color: DARK, size: 13, font: "Arial Black" }),
                 run("corporation", { bold: true, color: DARK, size: 11, font: "Arial" }),
-              ], spacing: { after: 30 } }),
-              new Paragraph({ children: [run("www.", { size: 14, color: GRAY_TEXT }), run("iucorporation", { size: 14, color: PURPLE, bold: true }), run(".com", { size: 14, color: GRAY_TEXT })], spacing: { after: 20 } }),
-              new Paragraph({ children: [run("info", { size: 14, color: PURPLE, bold: true }), run("@iucorporation.com", { size: 14, color: GRAY_TEXT })], spacing: { after: 0 } }),
+              ], spacing: { after: 20 } }),
+              new Paragraph({ children: [run("www.", { size: 13, color: GRAY_TEXT }), run("iucorporation", { size: 13, color: PURPLE, bold: true }), run(".com", { size: 13, color: GRAY_TEXT })], spacing: { after: 15 } }),
+              new Paragraph({ children: [run("info", { size: 13, color: PURPLE, bold: true }), run("@iucorporation.com", { size: 13, color: GRAY_TEXT })], spacing: { after: 0 } }),
             ]
           }),
-          // Col 2: ¡Contáctanos!
           new TableCell({
             width: { size: 1700, type: WidthType.DXA },
             margins: { top: 0, bottom: 0, left: 60, right: 60 },
@@ -172,7 +154,6 @@ const buildPageFooter = () => new Footer({
               new Paragraph({ children: [run("info", { size: 13, color: PURPLE, bold: true }), run("@iucorporation.com", { size: 13, color: GRAY_TEXT })], spacing: { after: 0 } }),
             ]
           }),
-          // Col 3: CDMX
           new TableCell({
             width: { size: 2600, type: WidthType.DXA },
             margins: { top: 0, bottom: 0, left: 60, right: 60 },
@@ -183,7 +164,6 @@ const buildPageFooter = () => new Footer({
               new Paragraph({ children: [run("Info@iucorporation.com", { size: 13, color: GRAY_TEXT })], spacing: { after: 0 } }),
             ]
           }),
-          // Col 4: MID
           new TableCell({
             width: { size: 2400, type: WidthType.DXA },
             margins: { top: 0, bottom: 0, left: 60, right: 60 },
@@ -194,15 +174,14 @@ const buildPageFooter = () => new Footer({
               new Paragraph({ children: [run("contacto", { size: 13, color: PURPLE, bold: true }), run("@hiumanlab.com", { size: 13, color: GRAY_TEXT })], spacing: { after: 0 } }),
             ]
           }),
-          // Col 5: Redes sociales
           new TableCell({
             width: { size: 900, type: WidthType.DXA },
             margins: { top: 0, bottom: 0, left: 60, right: 0 },
             verticalAlign: VerticalAlign.CENTER,
             children: [
-              new Paragraph({ children: [run("f", { bold: true, size: 16, color: PURPLE })], spacing: { after: 15 } }),
+              new Paragraph({ children: [run("f",  { bold: true, size: 16, color: PURPLE })], spacing: { after: 15 } }),
               new Paragraph({ children: [run("in", { bold: true, size: 16, color: PURPLE })], spacing: { after: 15 } }),
-              new Paragraph({ children: [run("⊙", { bold: true, size: 16, color: PURPLE })], spacing: { after: 0 } }),
+              new Paragraph({ children: [run("⊙",  { bold: true, size: 16, color: PURPLE })], spacing: { after: 0 } }),
             ]
           }),
         ]
@@ -211,8 +190,7 @@ const buildPageFooter = () => new Footer({
   ]
 });
 
-// ─── Términos estándar ───────────────────────────────────────────────────────
-
+// ─── Términos estándar ────────────────────────────────────────────────────────
 const getTerms = (clientName) => [
   ["Exclusión de Costos de Infraestructura", `Esta propuesta no incluye costos asociados a infraestructura tecnológica, plataformas de terceros, servicios en la nube ni cualquier otro dispositivo de hardware o software requerido por el cliente. ${clientName} es quien debe cubrir con los costos adicionales de plataformas a integrar.`],
   ["Alcance del Proyecto", "El alcance del proyecto abarca únicamente las actividades de análisis, diagnóstico, propuesta y desarrollo de la solución descritas en el documento. Cualquier solicitud adicional será considerada como un cambio de alcance y requerirá una nueva estimación y presupuesto."],
@@ -239,16 +217,20 @@ const getTerms = (clientName) => [
   ["Funcionamiento Online", "La aplicación web funcionará únicamente en modo online, requiriendo conexión a internet para el acceso y funcionamiento de todas las funcionalidades. No se incluye la implementación de funcionalidades offline o sincronización de datos en modo desconectado."]
 ];
 
-// ─── Generador principal ─────────────────────────────────────────────────────
+// ─── Helper imagen diagrama — centrada, dimensiones reducidas ─────────────────
+const diagramImg = (imgBuffer, w = 480, h = 240) =>
+  new Paragraph({
+    alignment: AlignmentType.CENTER,
+    children: [new ImageRun({ data: imgBuffer, transformation: { width: w, height: h }, type: 'png' })],
+    spacing: { before: 60, after: 100 }
+  });
 
+// ─── Generador principal ──────────────────────────────────────────────────────
 async function generateDocxBuffer(p) {
   const terms = getTerms(p.tituloCliente);
 
-  // ── Render Mermaid diagrams to PNG ──────────────────────────────────────
   console.log('Rendering Mermaid diagrams...');
-  let imgArquitectura = null;
-  let imgFlujo        = null;
-  let imgRoles        = null;
+  let imgArquitectura = null, imgFlujo = null, imgRoles = null;
 
   const renderDiagram = async (code) => {
     try { return await mermaidToPng(code, { width: 900 }); }
@@ -269,10 +251,10 @@ async function generateDocxBuffer(p) {
   ];
 
   const preciosFila = [
-    { name: "Levantamiento de Requerimientos",       val: p.precios.levantamiento },
+    { name: "Levantamiento de Requerimientos",         val: p.precios.levantamiento },
     { name: "Diseño de Maquetación con Figma (UI/UX)", val: p.precios.maqueta },
-    { name: "Desarrollo de la plataforma",           val: p.precios.desarrollo },
-    { name: "Pruebas de funcionalidad UAT",          val: p.precios.qa },
+    { name: "Desarrollo de la plataforma",             val: p.precios.desarrollo },
+    { name: "Pruebas de funcionalidad UAT",            val: p.precios.qa },
   ];
 
   const pageHeader = buildPageHeader();
@@ -282,16 +264,11 @@ async function generateDocxBuffer(p) {
     numbering: {
       config: [{
         reference: "bullets",
-        levels: [{
-          level: 0, format: LevelFormat.BULLET, text: "•",
-          alignment: AlignmentType.LEFT,
-          style: { paragraph: { indent: { left: 720, hanging: 360 } } }
-        }]
+        levels: [{ level: 0, format: LevelFormat.BULLET, text: "•", alignment: AlignmentType.LEFT,
+          style: { paragraph: { indent: { left: 720, hanging: 360 } } } }]
       }]
     },
-    styles: {
-      default: { document: { run: { font: "Arial", size: 20, color: DARK } } }
-    },
+    styles: { default: { document: { run: { font: "Arial", size: 20, color: DARK } } } },
     sections: [{
       properties: {
         page: {
@@ -303,8 +280,8 @@ async function generateDocxBuffer(p) {
       footers: { default: pageFooter },
       children: [
 
-        // ── PORTADA ──────────────────────────────────────────────────────────
-        spacer(1800),   // reducido de 2400
+        // ── PORTADA ───────────────────────────────────────────────────────────
+        new Paragraph({ text: "", spacing: { before: 1800 } }),
         new Paragraph({
           alignment: AlignmentType.CENTER,
           children: [run(p.tituloProyecto, { bold: true, size: 52, color: DARK, font: "Arial Black" })],
@@ -313,17 +290,17 @@ async function generateDocxBuffer(p) {
         new Paragraph({
           alignment: AlignmentType.CENTER,
           children: [run(p.tituloCliente, { bold: true, size: 36, color: DARK, font: "Arial Black" })],
-          spacing: { after: 360 }
+          spacing: { after: 320 }
         }),
         new Paragraph({
           alignment: AlignmentType.CENTER,
           children: [run("ACTA ENTENDIMIENTO Y PROPUESTA ECONÓMICA", { size: 22, color: "555555" })],
-          spacing: { after: 100 }
+          spacing: { after: 80 }
         }),
         new Paragraph({
           alignment: AlignmentType.CENTER,
           children: [orangeRun(p.fechaProyecto, 24)],
-          spacing: { after: 480 }
+          spacing: { after: 400 }
         }),
         new Table({
           width: { size: 3000, type: WidthType.DXA },
@@ -351,9 +328,7 @@ async function generateDocxBuffer(p) {
         h2("Arquitectura Propuesta"),     body(p.arquitecturaPropuesta),
         h2("Metodología de Trabajo"),     body(p.metodologiaTrabajo),
         h2("Entregables"),
-        ...(Array.isArray(p.entregables)
-          ? p.entregables
-          : [p.entregables]).map(e => bullet(e)),
+        ...(Array.isArray(p.entregables) ? p.entregables : [p.entregables ?? '']).map(e => bullet(e)),
         pb(),
 
         // ── MÓDULOS ───────────────────────────────────────────────────────────
@@ -363,8 +338,8 @@ async function generateDocxBuffer(p) {
           columnWidths: [2500, 6500],
           borders: tableBorders,
           rows: [
-            new TableRow({ children: [headerCell("Módulo", 2500), headerCell("Descripción", 6500)] }),
-            ...p.modulos.map(m => new TableRow({ children: [
+            new TableRow({ children: [headerCell("Módulo", 2500), headerCell("Objetivo + Actividades", 6500)] }),
+            ...(p.modulos ?? []).map(m => new TableRow({ children: [
               new TableCell({
                 width: { size: 2500, type: WidthType.DXA },
                 shading: { fill: LIGHT_PURPLE, type: ShadingType.CLEAR },
@@ -378,7 +353,7 @@ async function generateDocxBuffer(p) {
                 children: [
                   new Paragraph({ children: [orangeRun("Objetivo: ", 18), run(m.objetivo, { size: 18 })] }),
                   new Paragraph({ children: [orangeRun("Actividades:", 18)], spacing: { before: 60, after: 40 } }),
-                  ...(Array.isArray(m.actividades) ? m.actividades : [m.actividades])
+                  ...(Array.isArray(m.actividades) ? m.actividades : [m.actividades ?? ''])
                     .map(a => new Paragraph({
                       children: [run("• " + a, { size: 18 })],
                       indent: { left: 240 },
@@ -393,31 +368,24 @@ async function generateDocxBuffer(p) {
 
         // ── DIAGRAMAS ─────────────────────────────────────────────────────────
         h1("DIAGRAMAS"),
-        h3("- Arquitectura General:"),
-        ...(imgArquitectura
-          ? [new Paragraph({ children: [new ImageRun({ data: imgArquitectura, transformation: { width: 590, height: 300 }, type: 'png' })], spacing: { before: 80, after: 160 } })]
-          : [body(p.diagramas.arquitectura)]),
-        h3("- Diagrama de Flujo de Información:"),
-        ...(imgFlujo
-          ? [new Paragraph({ children: [new ImageRun({ data: imgFlujo, transformation: { width: 590, height: 300 }, type: 'png' })], spacing: { before: 80, after: 160 } })]
-          : [body(p.diagramas.flujo)]),
-        h3("- Diagrama de Roles:"),
-        ...(imgRoles
-          ? [new Paragraph({ children: [new ImageRun({ data: imgRoles, transformation: { width: 590, height: 280 }, type: 'png' })], spacing: { before: 80, after: 160 } })]
-          : [body(p.diagramas.roles)]),
+        h3("Arquitectura General"),
+        ...(imgArquitectura ? [diagramImg(imgArquitectura, 500, 260)] : [body(p.diagramas?.arquitectura ?? '')]),
+        h3("Diagrama de Flujo de Información"),
+        ...(imgFlujo ? [diagramImg(imgFlujo, 500, 220)] : [body(p.diagramas?.flujo ?? '')]),
+        h3("Diagrama de Roles"),
+        ...(imgRoles ? [diagramImg(imgRoles, 460, 210)] : [body(p.diagramas?.roles ?? '')]),
         pb(),
 
         // ── CRITERIOS ─────────────────────────────────────────────────────────
         h1("CRITERIOS DE ACEPTACIÓN"),
         body(p.criteriosAceptacionGeneral),
-        spacer(80),
         new Table({
           width: { size: 9000, type: WidthType.DXA },
           columnWidths: [2500, 6500],
           borders: tableBorders,
           rows: [
-            new TableRow({ children: [headerCell("Criterio de Aceptación", 2500), headerCell("Descripción", 6500)] }),
-            ...p.criteriosPorModulo.map(c => new TableRow({ children: [
+            new TableRow({ children: [headerCell("Módulo", 2500), headerCell("Reglas y Criterios", 6500)] }),
+            ...(p.criteriosPorModulo ?? []).map(c => new TableRow({ children: [
               new TableCell({
                 width: { size: 2500, type: WidthType.DXA },
                 shading: { fill: LIGHT_PURPLE, type: ShadingType.CLEAR },
@@ -431,19 +399,17 @@ async function generateDocxBuffer(p) {
                 children: [
                   new Paragraph({ children: [orangeRun("Reglas de Negocio:", 18)], spacing: { after: 40 } }),
                   new Paragraph({ children: [run(c.reglasNegocio, { size: 18 })], spacing: { after: 60 } }),
-                  new Paragraph({ children: [orangeRun("Aceptación:", 18)], spacing: { after: 40 } }),
+                  new Paragraph({ children: [orangeRun("Criterios de Aceptación:", 18)], spacing: { after: 40 } }),
                   new Paragraph({ children: [run(c.criteriosAceptacion, { size: 18 })] })
                 ]
               })
             ]}))
           ]
         }),
-        spacer(160),
+
         h1("EXCLUSIONES EXPLÍCITAS DE LA PROPUESTA"),
-        ...(Array.isArray(p.exclusionesExplicitas)
-          ? p.exclusionesExplicitas
-          : [p.exclusionesExplicitas]).map(e => bullet(e)),
-        spacer(160),
+        ...(Array.isArray(p.exclusionesExplicitas) ? p.exclusionesExplicitas : [p.exclusionesExplicitas ?? '']).map(e => bullet(e)),
+
         h1("ROLES Y RESPONSABILIDADES DEL PROYECTO"),
         body(p.rolesResponsabilidades),
         h3("Principios de Responsabilidad"),
@@ -452,14 +418,14 @@ async function generateDocxBuffer(p) {
 
         // ── TIEMPOS ───────────────────────────────────────────────────────────
         h1("TIEMPO DE ENTREGA."),
+        body("Compromiso total con la creación de una solución tecnológica de alta calidad, asegurando no delegar el trabajo central a programadores independientes no verificados."),
         new Table({
           width: { size: 9000, type: WidthType.DXA },
           columnWidths: [2600, 1000, 500, 500, 500, 500, 500, 500, 500],
           borders: tableBorders,
           rows: [
             new TableRow({ children: [
-              headerCell("Fase / ID", 2600),
-              headerCell("Estimación", 1000),
+              headerCell("Fase / ID", 2600), headerCell("Estimación", 1000),
               ...[1,2,3,4,5,6,7].map(n => headerCell(`S${n}`, 500))
             ]}),
             ...tiemposFases.map(t => new TableRow({ children: [
@@ -473,11 +439,10 @@ async function generateDocxBuffer(p) {
                 margins: { top: 70, bottom: 70, left: 80, right: 80 },
                 children: [new Paragraph({ children: [run(`${t.dias}d / ${t.hrs}hrs`, { size: 16 })] })]
               }),
-              ...[1,2,3,4,5,6,7].map(w => semCell(t.semanas.includes(w)))
+              ...[1,2,3,4,5,6,7].map(w => semCell((t.semanas ?? []).includes(w)))
             ]}))
           ]
         }),
-        spacer(80),
         new Paragraph({
           children: [run('"Los tiempos pueden ajustarse en función de la entrega oportuna de insumos por parte del cliente."',
             { italics: true, size: 18, color: GRAY_TEXT })],
@@ -522,7 +487,7 @@ async function generateDocxBuffer(p) {
         }),
         new Paragraph({
           children: [run("*Precios más IVA", { italics: true, size: 18, color: GRAY_TEXT })],
-          spacing: { before: 80, after: 80 }
+          spacing: { before: 60, after: 60 }
         }),
         body("Esta propuesta establece una evolución clara, controlada y escalable de la plataforma y los módulos."),
         body("Cualquier ampliación futura deberá tratarse como una nueva fase de evolución del producto."),
@@ -533,7 +498,6 @@ async function generateDocxBuffer(p) {
         labelBody("Pago 1", "Se deberá realizar un pago del 33% del monto total como anticipo para el inicio de las actividades del proyecto."),
         labelBody("Pago 2", "El 33% al llevar la mitad del proyecto."),
         labelBody("Pago 3", "El 33% restante deberá ser abonado al momento de completar el 100% del alcance del proyecto y entregar los entregables acordados."),
-        spacer(160),
 
         // ── TÉRMINOS Y CONDICIONES ────────────────────────────────────────────
         h1("TÉRMINOS Y CONDICIONES."),
