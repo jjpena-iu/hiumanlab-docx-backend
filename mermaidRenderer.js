@@ -1,5 +1,4 @@
-const puppeteer = require('puppeteer-core');
-const chromium  = require('@sparticuz/chromium');
+const puppeteer = require('puppeteer');
 
 function sanitizeMermaid(code) {
   if (!code) return '';
@@ -35,12 +34,17 @@ mermaid.init(undefined,'.mermaid')
 
   let browser = null;
   try {
-    const executablePath = await chromium.executablePath();
     browser = await puppeteer.launch({
-      args: chromium.args,
-      defaultViewport: chromium.defaultViewport,
-      executablePath,
-      headless: chromium.headless,
+      headless: 'new',
+      args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        '--disable-gpu',
+        '--no-first-run',
+        '--no-zygote',
+        '--single-process'
+      ]
     });
     const page = await browser.newPage();
     await page.setViewport({ width, height: 600, deviceScaleFactor: 1.5 });
