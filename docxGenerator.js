@@ -225,6 +225,20 @@ const diagramImg = (imgBuffer, w = 480, h = 240) =>
     spacing: { before: 60, after: 100 }
   });
 
+// Placeholder cuando Mermaid falla — borde punteado, sin código crudo
+const diagramPlaceholder = (label) =>
+  new Paragraph({
+    children: [run(`[ Diagrama: ${label} ]`, { italics: true, color: GRAY_TEXT, size: 18 })],
+    alignment: AlignmentType.CENTER,
+    border: {
+      top:    { style: BorderStyle.DASHED, size: 4, color: 'CCCCCC' },
+      bottom: { style: BorderStyle.DASHED, size: 4, color: 'CCCCCC' },
+      left:   { style: BorderStyle.DASHED, size: 4, color: 'CCCCCC' },
+      right:  { style: BorderStyle.DASHED, size: 4, color: 'CCCCCC' },
+    },
+    spacing: { before: 60, after: 80 }
+  });
+
 // ─── Generador principal ──────────────────────────────────────────────────────
 async function generateDocxBuffer(p) {
   const terms = getTerms(p.tituloCliente);
@@ -369,11 +383,11 @@ async function generateDocxBuffer(p) {
         // ── DIAGRAMAS ─────────────────────────────────────────────────────────
         h1("DIAGRAMAS"),
         h3("Arquitectura General"),
-        ...(imgArquitectura ? [diagramImg(imgArquitectura, 500, 260)] : [body(p.diagramas?.arquitectura ?? '')]),
+        ...(imgArquitectura ? [diagramImg(imgArquitectura, 500, 260)] : [diagramPlaceholder('Arquitectura General')]),
         h3("Diagrama de Flujo de Información"),
-        ...(imgFlujo ? [diagramImg(imgFlujo, 500, 220)] : [body(p.diagramas?.flujo ?? '')]),
+        ...(imgFlujo ? [diagramImg(imgFlujo, 500, 220)] : [diagramPlaceholder('Flujo de Información')]),
         h3("Diagrama de Roles"),
-        ...(imgRoles ? [diagramImg(imgRoles, 460, 210)] : [body(p.diagramas?.roles ?? '')]),
+        ...(imgRoles ? [diagramImg(imgRoles, 460, 210)] : [diagramPlaceholder('Diagrama de Roles')]),
         pb(),
 
         // ── CRITERIOS ─────────────────────────────────────────────────────────
