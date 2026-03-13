@@ -1,4 +1,4 @@
-const { execSync, exec } = require('child_process');
+const { execSync } = require('child_process');
 const fs   = require('fs');
 const path = require('path');
 const os   = require('os');
@@ -6,67 +6,54 @@ const os   = require('os');
 function sanitizeMermaid(code) {
   if (!code) return '';
   let c = code.replace(/\r\n/g, '\n').replace(/\r/g, '\n').trim();
-  // Reemplazar caracteres no-ASCII problemáticos
   c = c.replace(/[^\x00-\x7F]/g, ch => {
     return {'®':'(R)','©':'(C)','™':'(TM)','→':'-->','←':'<--','↔':'<-->'}[ch] || '';
   });
   return c;
 }
 
-/**
- * Renderiza Mermaid a PNG usando @mermaid-js/mermaid-cli (mmdc)
- * Funciona en Railway sin necesitar browser externo
- */
 async function mermaidToPng(mermaidCode, opts = {}) {
   const code = sanitizeMermaid(mermaidCode);
   if (!code) throw new Error('Empty mermaid code');
 
-  const tmpDir    = os.tmpdir();
-  const inputFile = path.join(tmpDir, `mermaid_${Date.now()}.mmd`);
-  const outFile   = path.join(tmpDir, `mermaid_${Date.now()}.png`);
+  const tmpDir     = os.tmpdir();
+  const ts         = Date.now();
+  const inputFile  = path.join(tmpDir, `mmd_${ts}.mmd`);
+  const outFile    = path.join(tmpDir, `mmd_${ts}.png`);
+  const configFile = path.join(tmpDir, `mmd_cfg_${ts}.json`);
 
-  const configJson = JSON.stringify({
+  const config = {
     theme: 'base',
     themeVariables: {
-      primaryColor:       '#EEE8F8',
-      primaryTextColor:   '#1A1A2E',
+      primaryColor: '#EEE8F8',
+      primaryTextColor: '#1A1A2E',
       primaryBorderColor: '#7B5EA7',
-      lineColor:          '#7B5EA7',
-      secondaryColor:     '#f0ebff',
-      background:         '#ffffff'
+      lineColor: '#7B5EA7',
+      background: '#ffffff'
     }
-  });
-
-  const configFile = path.join(tmpDir, `mermaid_cfg_${Date.now()}.json`);
+  };
 
   try {
-    fs.writeFileSync(inputFile,  code,       'utf8');
-    fs.writeFileSync(configFile, configJson, 'utf8');
+    fs.writeFileSync(inputFile,  code,                      'utf8');
+    fs.writeFileSync(configFile, JSON.stringify(config),    'utf8');
 
-    // mmdc instalado globalmente via package.json postinstall o como dep
-    const mmdcPath = path.join(process.cwd(), 'node_modules', '.bin', 'mmdc');
+    const mmdcPath   = path.join(process.cwd(), 'node_modules', '.bin', 'mmdc');
+    // Usar Chromium del sistema (instalado via nixpacks) si está disponible
+    const chromiumPath = process.env.PUPPETEER_EXECUTABLE_PATH || '';
+    const extraEnv     = chromiumPath
+      ? { ...process.env, PUPPETEER_EXECUTABLE_PATH: chromiumPath }
+      : process.env;
 
     execSync(
-      `"${mmdcPath}" -i "${inputFile}" -o "${outFile}" -c "${configFile}" -b white -w 800`,
-      {
-        timeout: 30000,
-        env: {
-          ...process.env,
-          PUPPETEER_SKIP_CHROMIUM_DOWNLOAD: 'true',
-          // mmdc usará el Chromium del sistema si está disponible
-        }
-      }
+      `"${mmdcPath}" -i "${inputFile}" -o "${outFile}" -c "${configFile}" -b white -w 800 --puppeteerConfigFile /dev/null`,
+      { timeout: 60000, env: extraEnv }
     );
 
-    if (!fs.existsSync(outFile)) throw new Error('mmdc did not produce output file');
-
-    const buffer = fs.readFileSync(outFile);
-    return buffer;
+    if (!fs.existsSync(outFile)) throw new Error('mmdc produced no output');
+    return fs.readFileSync(outFile);
 
   } finally {
-    try { fs.unlinkSync(inputFile);  } catch {}
-    try { fs.unlinkSync(outFile);    } catch {}
-    try { fs.unlinkSync(configFile); } catch {}
+    [inputFile, outFile, configFile].forEach(f => { try { fs.unlinkSync(f); } catch {} });
   }
 }
 
