@@ -16,13 +16,13 @@ async function mermaidToPng(mermaidCode, opts = {}) {
   const code = sanitizeMermaid(mermaidCode);
   if (!code) throw new Error('Empty mermaid code');
 
-  const tmpDir     = os.tmpdir();
   const ts         = Date.now();
+  const tmpDir     = os.tmpdir();
   const inputFile  = path.join(tmpDir, `mmd_${ts}.mmd`);
   const outFile    = path.join(tmpDir, `mmd_${ts}.png`);
   const configFile = path.join(tmpDir, `mmd_cfg_${ts}.json`);
 
-  const config = {
+  const mermaidConfig = {
     theme: 'base',
     themeVariables: {
       primaryColor: '#EEE8F8',
@@ -34,22 +34,29 @@ async function mermaidToPng(mermaidCode, opts = {}) {
   };
 
   try {
-    fs.writeFileSync(inputFile,  code,                      'utf8');
-    fs.writeFileSync(configFile, JSON.stringify(config),    'utf8');
+    fs.writeFileSync(inputFile,  code,                          'utf8');
+    fs.writeFileSync(configFile, JSON.stringify(mermaidConfig), 'utf8');
 
-    const mmdcPath   = path.join(process.cwd(), 'node_modules', '.bin', 'mmdc');
-    // Usar Chromium del sistema (instalado via nixpacks) si está disponible
-    const chromiumPath = process.env.PUPPETEER_EXECUTABLE_PATH || '';
-    const extraEnv     = chromiumPath
-      ? { ...process.env, PUPPETEER_EXECUTABLE_PATH: chromiumPath }
-      : process.env;
+    const mmdcPath = path.join(process.cwd(), 'node_modules', '.bin', 'mmdc');
+
+    // puppeteerConfig con --no-sandbox para Railway
+    const puppeteerCfgFile = path.join(tmpDir, `pup_${ts}.json`);
+    fs.writeFileSync(puppeteerCfgFile, JSON.stringify({
+      args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu']
+    }), 'utf8');
 
     execSync(
-      `"${mmdcPath}" -i "${inputFile}" -o "${outFile}" -c "${configFile}" -b white -w 800 --puppeteerConfigFile /dev/null`,
-      { timeout: 60000, env: extraEnv }
+      `"${mmdcPath}" -i "${inputFile}" -o "${outFile}" -c "${configFile}" -b white -w 800 --puppeteerConfigFile "${puppeteerCfgFile}"`,
+      {
+        timeout: 60000,
+        env: { ...process.env, PUPPETEER_SKIP_CHROMIUM_DOWNLOAD: 'true' }
+      }
     );
 
+    try { fs.unlinkSync(puppeteerCfgFile); } catch {}
+
     if (!fs.existsSync(outFile)) throw new Error('mmdc produced no output');
+    console.log('✅ Mermaid diagram rendered successfully');
     return fs.readFileSync(outFile);
 
   } finally {
